@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Canhoto NF — Renomeação Automática</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --surface: #161616;
+    --surface2: #1e1e1e;
+    --border: #2a2a2a;
+    --border2: #333;
+    --text: #f0ede8;
+    --muted: #6b6b6b;
+    --muted2: #888;
+    --accent: #c8f060;
+    --accent-dim: #9bbf3a;
+    --accent-bg: rgba(200,240,96,0.07);
+    --accent-bg2: rgba(200,240,96,0.13);
+    --red: #ff5252;
+    --red-bg: rgba(255,82,82,0.08);
+    --blue: #60b8f0;
+    --blue-bg: rgba(96,184,240,0.08);
+    --radius: 10px;
+    --radius-lg: 16px;
+    --font: 'Syne', sans-serif;
+    --mono: 'DM Mono', monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* HEADER */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 100;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .logo-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  .header-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 3px 10px;
+  }
+
+  /* MAIN */
+  main {
+    flex: 1;
+    max-width: 720px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 4rem;
+  }
+
+  .page-title {
+    font-size: clamp(26px, 5vw, 38px);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    margin-bottom: 0.5rem;
+  }
+
+  .page-title span { color: var(--accent); }
+
+  .page-sub {
+    font-size: 14px;
+    color: var(--muted2);
+    margin-bottom: 2.5rem;
+    line-height: 1.6;
+  }
+
+  /* API KEY */
+  .api-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .api-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .api-input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .api-input:focus { border-color: var(--accent); }
+  .api-input::placeholder { color: var(--muted); }
+
+  .api-toggle {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    color: var(--muted2);
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.2s, color 0.2s;
+  }
+
+  .api-toggle:hover { border-color: var(--border2); color: var(--text); }
+
+  .api-hint {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 8px;
+    font-family: var(--mono);
+  }
+
+  .api-hint a { color: var(--blue); text-decoration: none; }
+  .api-hint a:hover { text-decoration: underline; }
+
+  /* DROP ZONE */
+  .drop-zone {
+    border: 1.5px dashed var(--border2);
+    border-radius: var(--radius-lg);
+    padding: 3rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    position: relative;
+    transition: border-color 0.2s, background 0.2s;
+    background: var(--surface);
+    margin-bottom: 1.5rem;
+  }
+
+  .drop-zone:hover, .drop-zone.over {
+    border-color: var(--accent);
+    background: var(--accent-bg);
+  }
+
+  .drop-zone input {
+    position: absolute; inset: 0;
+    opacity: 0; cursor: pointer;
+    width: 100%; height: 100%;
+  }
+
+  .drop-icon {
+    width: 52px; height: 52px;
+    border-radius: 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1rem;
+    font-size: 22px;
+  }
+
+  .drop-label {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  .drop-sub {
+    font-size: 13px;
+    color: var(--muted2);
+  }
+
+  .drop-formats {
+    margin-top: 14px;
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .fmt-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border2);
+    color: var(--muted2);
+    background: var(--surface2);
+  }
+
+  /* STATUS */
+  .status-bar {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    margin-bottom: 1.5rem;
+    border: 1px solid;
+  }
+
+  .status-bar.show { display: flex; }
+  .status-bar.loading { background: var(--blue-bg); border-color: rgba(96,184,240,0.2); color: var(--blue); }
+  .status-bar.error   { background: var(--red-bg);  border-color: rgba(255,82,82,0.2);  color: var(--red); }
+  .status-bar.ok      { background: var(--accent-bg); border-color: rgba(200,240,96,0.2); color: var(--accent); }
+
+  .spin { display: inline-block; animation: spin 1s linear infinite; font-style: normal; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* PREVIEW */
+  .preview-wrap {
+    display: none;
+    margin-bottom: 1.5rem;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    position: relative;
+  }
+
+  .preview-wrap.show { display: block; }
+
+  .preview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .preview-name {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 80%;
+  }
+
+  .preview-img {
+    width: 100%;
+    max-height: 300px;
+    object-fit: contain;
+    display: block;
+    background: #111;
+  }
+
+  #pdfCanvas {
+    width: 100%;
+    display: block;
+    background: #111;
+  }
+
+  /* RESULTS */
+  .results-section {
+    display: none;
+  }
+
+  .results-section.show { display: block; }
+
+  .results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  .results-count {
+    font-size: 13px;
+    color: var(--muted2);
+    font-family: var(--mono);
+  }
+
+  .results-count strong { color: var(--accent); }
+
+  .nf-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 1.25rem; }
+
+  .nf-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: border-color 0.15s;
+  }
+
+  .nf-card:hover { border-color: var(--border2); }
+
+  .nf-badge {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    background: var(--accent-bg2);
+    border: 1px solid rgba(200,240,96,0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .nf-info { flex: 1; min-width: 0; }
+
+  .nf-number {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  .nf-filename {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .nf-actions { display: flex; gap: 6px; align-items: center; }
+
+  .btn-dl {
+    background: var(--accent);
+    color: #0f0f0f;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: var(--font);
+    transition: background 0.15s;
+    white-space: nowrap;
+  }
+
+  .btn-dl:hover { background: var(--accent-dim); }
+
+  .btn-icon {
+    width: 32px; height: 32px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    transition: border-color 0.15s;
+    flex-shrink: 0;
+  }
+
+  .btn-icon:hover { border-color: var(--red); }
+
+  /* MANUAL ADD */
+  .manual-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .manual-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .manual-input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 9px 12px;
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .manual-input:focus { border-color: var(--accent); }
+  .manual-input::placeholder { color: var(--muted); }
+
+  .btn-add {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 9px 16px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: var(--font);
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.15s;
+  }
+
+  .btn-add:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* BOTTOM BUTTONS */
+  .action-row {
+    display: flex;
+    gap: 10px;
+  }
+
+  .btn-all {
+    flex: 1;
+    background: var(--accent);
+    color: #0f0f0f;
+    border: none;
+    border-radius: var(--radius);
+    padding: 13px 20px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: var(--font);
+    transition: background 0.15s;
+    letter-spacing: -0.01em;
+  }
+
+  .btn-all:hover { background: var(--accent-dim); }
+  .btn-all:disabled { background: var(--border2); color: var(--muted); cursor: not-allowed; }
+
+  .btn-reset {
+    background: transparent;
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 13px 20px;
+    color: var(--muted2);
+    font-size: 14px;
+    font-family: var(--font);
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+
+  .btn-reset:hover { border-color: var(--text); color: var(--text); }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 1rem 2rem;
+    text-align: center;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+
+  canvas#pdfCanvas { max-height: 300px; object-fit: contain; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    Canhoto NF
+  </div>
+  <span class="header-tag">v1.0</span>
+</header>
+
+<main>
+  <h1 class="page-title">Renomeação<br><span>automática</span> de canhotos</h1>
+  <p class="page-sub">Arraste o arquivo da transportadora (JPEG, PNG ou PDF), a IA detecta os números dos canhotos e gera os arquivos prontos para salvar.</p>
+
+  <!-- API KEY -->
+  <div class="api-section">
+    <p class="section-label">Chave de API — Anthropic</p>
+    <div class="api-row">
+      <input type="password" class="api-input" id="apiKey" placeholder="sk-ant-api03-..." autocomplete="off">
+      <button class="api-toggle" onclick="toggleKey()">mostrar</button>
+    </div>
+    <p class="api-hint">
+      Obtenha sua chave em <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> — salva só no seu navegador.
+    </p>
+  </div>
+
+  <!-- DROP ZONE -->
+  <div class="drop-zone" id="dropZone">
+    <input type="file" id="fileInput" accept="image/jpeg,image/png,application/pdf">
+    <div class="drop-icon">📂</div>
+    <p class="drop-label">Arraste o arquivo aqui</p>
+    <p class="drop-sub">ou clique para selecionar</p>
+    <div class="drop-formats">
+      <span class="fmt-tag">JPEG</span>
+      <span class="fmt-tag">PNG</span>
+      <span class="fmt-tag">PDF</span>
+    </div>
+  </div>
+
+  <!-- STATUS -->
+  <div class="status-bar" id="statusBar">
+    <span id="statusIcon"></span>
+    <span id="statusMsg"></span>
+  </div>
+
+  <!-- PREVIEW -->
+  <div class="preview-wrap" id="previewWrap">
+    <div class="preview-header">
+      <span class="preview-name" id="previewName"></span>
+      <span style="font-size:11px;color:var(--muted);font-family:var(--mono)">pré-visualização</span>
+    </div>
+    <img id="previewImg" class="preview-img" alt="prévia do canhoto" style="display:none">
+    <canvas id="pdfCanvas" style="display:none"></canvas>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results-section" id="resultsSection">
+    <div class="results-header">
+      <p class="section-label" style="margin:0">Canhotos detectados</p>
+      <span class="results-count" id="resultsCount"></span>
+    </div>
+
+    <div class="nf-list" id="nfList"></div>
+
+    <!-- MANUAL -->
+    <div class="manual-section">
+      <p class="section-label">Adicionar número manualmente</p>
+      <div class="manual-row">
+        <input type="text" class="manual-input" id="manualInput" placeholder="ex: 956604">
+        <button class="btn-add" onclick="addManual()">+ Adicionar</button>
+      </div>
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="action-row">
+      <button class="btn-all" id="btnAll" onclick="downloadAll()">⬇ Baixar todos os arquivos</button>
+      <button class="btn-reset" onclick="reset()">Nova nota</button>
+    </div>
+  </div>
+</main>
+
+<footer>canhoto-nf · uso interno · powered by claude</footer>
+
+<canvas id="offCanvas" style="display:none"></canvas>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+let currentFile = null;
+let currentNumbers = [];
+let currentImageDataUrl = null;
+
+// --- API KEY ---
+const storedKey = localStorage.getItem('nf_api_key') || '';
+document.getElementById('apiKey').value = storedKey;
+document.getElementById('apiKey').addEventListener('input', () => {
+  localStorage.setItem('nf_api_key', document.getElementById('apiKey').value.trim());
+});
+
+function toggleKey() {
+  const inp = document.getElementById('apiKey');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+// --- DROP ZONE ---
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('over');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+
+// --- STATUS ---
+function setStatus(msg, type) {
+  const bar = document.getElementById('statusBar');
+  const icon = document.getElementById('statusIcon');
+  const msgEl = document.getElementById('statusMsg');
+  bar.className = 'status-bar show ' + type;
+  msgEl.textContent = msg;
+  icon.innerHTML = type === 'loading' ? '<i class="spin">⟳</i>' : type === 'ok' ? '✓' : '✕';
+}
+
+// --- FILE HANDLER ---
+async function handleFile(file) {
+  currentFile = file;
+  currentNumbers = [];
+  currentImageDataUrl = null;
+
+  document.getElementById('previewName').textContent = file.name;
+  document.getElementById('previewWrap').classList.add('show');
+  document.getElementById('resultsSection').classList.remove('show');
+
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey) { setStatus('Informe sua chave de API da Anthropic antes de continuar.', 'error'); return; }
+
+  if (file.type === 'application/pdf') {
+    await handlePDF(file, apiKey);
+  } else {
+    await handleImage(file, apiKey);
+  }
+}
+
+async function handleImage(file, apiKey) {
+  const reader = new FileReader();
+  reader.onload = async e => {
+    currentImageDataUrl = e.target.result;
+    document.getElementById('previewImg').src = e.target.result;
+    document.getElementById('previewImg').style.display = 'block';
+    document.getElementById('pdfCanvas').style.display = 'none';
+    await analyzeBase64(e.target.result.split(',')[1], file.type, apiKey);
+  };
+  reader.readAsDataURL(file);
+}
+
+async function handlePDF(file, apiKey) {
+  setStatus('Convertendo PDF para imagem...', 'loading');
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const page = await pdf.getPage(1);
+  const viewport = page.getViewport({ scale: 2 });
+  const canvas = document.getElementById('pdfCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  await page.render({ canvasContext: ctx, viewport }).promise;
+
+  document.getElementById('pdfCanvas').style.display = 'block';
+  document.getElementById('previewImg').style.display = 'none';
+
+  currentImageDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+  const base64 = currentImageDataUrl.split(',')[1];
+  await analyzeBase64(base64, 'image/jpeg', apiKey);
+}
+
+async function analyzeBase64(base64, mediaType, apiKey) {
+  setStatus('Lendo os canhotos com IA... aguarde', 'loading');
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 500,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+            {
+              type: 'text',
+              text: `Esta é uma imagem de um documento de transporte (DACTE/CTe/Nota Fiscal) que pode conter UM ou MAIS canhotos de recebimento.
+
+Cada canhoto possui um número de NF-e. Procure por campos como "NF-e Nº", "Nº", "NF", seguidos de números no formato 956.602 ou 956602.
+
+Retorne APENAS JSON válido, sem markdown, sem texto adicional:
+{"numeros": ["956602", "956603"]}
+
+Regras:
+- Remova pontos e espaços dos números
+- Inclua apenas números de NF (não inclua CNPJ, CEP, telefone, etc.)
+- Se não encontrar: {"numeros": []}
+- Retorne SOMENTE o JSON`
+            }
+          ]
+        }]
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    const text = data.content?.map(b => b.text || '').join('') || '';
+    const clean = text.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+    const nums = (parsed.numeros || []).map(n => String(n).replace(/[.\s-]/g, '').trim()).filter(Boolean);
+
+    currentNumbers = [...new Set(nums)];
+
+    if (currentNumbers.length === 0) {
+      setStatus('Nenhum número de NF encontrado. Adicione manualmente abaixo.', 'error');
+    } else {
+      setStatus(`${currentNumbers.length} canhoto(s) detectado(s) com sucesso.`, 'ok');
+    }
+
+    renderResults();
+
+  } catch (err) {
+    setStatus('Erro: ' + err.message, 'error');
+    currentNumbers = [];
+    renderResults();
+  }
+}
+
+// --- RENDER ---
+function renderResults() {
+  const section = document.getElementById('resultsSection');
+  const list = document.getElementById('nfList');
+  const count = document.getElementById('resultsCount');
+
+  section.classList.add('show');
+  count.innerHTML = `<strong>${currentNumbers.length}</strong> encontrado(s)`;
+  list.innerHTML = '';
+
+  currentNumbers.forEach((num, i) => {
+    const card = document.createElement('div');
+    card.className = 'nf-card';
+    card.innerHTML = `
+      <div class="nf-badge">📄</div>
+      <div class="nf-info">
+        <div class="nf-number">${num}</div>
+        <div class="nf-filename">${num}.jpg</div>
+      </div>
+      <div class="nf-actions">
+        <button class="btn-dl" onclick="downloadOne('${num}')">⬇ Baixar</button>
+        <div class="btn-icon" title="Remover" onclick="removeNum(${i})">✕</div>
+      </div>`;
+    list.appendChild(card);
+  });
+
+  document.getElementById('btnAll').disabled = currentNumbers.length === 0;
+}
+
+function removeNum(i) {
+  currentNumbers.splice(i, 1);
+  renderResults();
+  if (currentNumbers.length === 0) {
+    setStatus('Lista vazia. Adicione os números manualmente.', 'error');
+  } else {
+    setStatus(`${currentNumbers.length} canhoto(s) na lista.`, 'ok');
+  }
+}
+
+function addManual() {
+  const inp = document.getElementById('manualInput');
+  const val = inp.value.replace(/[.\s-]/g, '').trim();
+  if (!val) return;
+  if (!currentNumbers.includes(val)) {
+    currentNumbers.push(val);
+    renderResults();
+    setStatus(`${currentNumbers.length} canhoto(s) na lista.`, 'ok');
+  }
+  inp.value = '';
+}
+
+// --- DOWNLOAD ---
+function getImageDataUrl() {
+  return currentImageDataUrl;
+}
+
+function downloadOne(num) {
+  const dataUrl = getImageDataUrl();
+  if (!dataUrl) return;
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = num + '.jpg';
+  a.click();
+}
+
+function downloadAll() {
+  if (!currentNumbers.length) return;
+  let i = 0;
+  function next() {
+    if (i >= currentNumbers.length) return;
+    downloadOne(currentNumbers[i++]);
+    setTimeout(next, 700);
+  }
+  next();
+}
+
+// --- RESET ---
+function reset() {
+  currentFile = null;
+  currentNumbers = [];
+  currentImageDataUrl = null;
+  document.getElementById('previewWrap').classList.remove('show');
+  document.getElementById('resultsSection').classList.remove('show');
+  document.getElementById('statusBar').className = 'status-bar';
+  document.getElementById('previewImg').src = '';
+  document.getElementById('previewImg').style.display = 'none';
+  document.getElementById('pdfCanvas').style.display = 'none';
+  document.getElementById('nfList').innerHTML = '';
+  document.getElementById('manualInput').value = '';
+  document.getElementById('fileInput').value = '';
+  dropZone.classList.remove('over');
+}
+
+document.getElementById('manualInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addManual();
+});
+</script>
+</body>
+</html>
