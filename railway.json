@@ -1,0 +1,4 @@
+json{
+  "build": { "builder": "NIXPACKS" },
+  "deploy": { "startCommand": "npx serve . -p $PORT" }
+}
